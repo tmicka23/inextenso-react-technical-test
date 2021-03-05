@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 function App() {
+  // start checkboxes
   const [items, setItems] = useState([
     { label: "item1", checked: false },
     { label: "item2", checked: true },
@@ -56,6 +57,67 @@ function App() {
     setAllChecked(!allChecked);
     setItems(newItems);
   };
+  // end checkoxes
+
+  const [users, setUsers] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const defaultMessage = "please enter a github username in the previous field";
+  const [message, setMessage] = useState(defaultMessage);
+
+  /**
+   * @function fetchUsers
+   * @param {String} term
+   * @description
+   * fetch 20 first results of github search APi (users)
+   *
+   * if the request limit is reached, we display a message to user and we set "users" state at null
+   *
+   * if an error has occured, we display a message to user and we set "users" state at null
+   */
+  const fetchUsers = (term) => {
+    if (term && term.length >= 3) {
+      window
+        .fetch(
+          `https://api.github.com/search/users?q=${term}&page=1&per_page=20`
+        )
+        .then((response) => {
+          if (response.ok) {
+            response.json().then((data) => {
+              setUsers(data.items);
+              setMessage(defaultMessage);
+            });
+          } else if (response.status === 403) {
+            setUsers(null);
+            setMessage("you have reached the limit of 10 searches per minute");
+          }
+        })
+        .catch((error) => {
+          setUsers(null);
+          setMessage(
+            "an error has occured, please try again. if problem persist, contact us"
+          );
+          console.warn(error);
+        });
+    }
+  };
+
+  /**
+   * @function handleSearch
+   * @param {import("react").SyntheticEvent} e
+   * @description
+   * Updates the "searchTerm" state according to the onChange event listener of the search field
+   */
+
+  const handleSearch = async (e) => {
+    const { value } = e.target;
+    setSearchTerm(value);
+  };
+
+  useEffect(() => {
+    fetchUsers(searchTerm);
+    // eslint-disable-next-line
+  }, [searchTerm]);
 
   return (
     <div className="App">
@@ -82,6 +144,34 @@ function App() {
             />
           </li>
         ))}
+      </ul>
+      <hr />
+      <h1>Github API</h1>
+
+      <input
+        type="text"
+        placeholder="search github users"
+        onChange={handleSearch}
+        value={searchTerm}
+      />
+      <ul>
+        {!users ? (
+          <li>{message}</li>
+        ) : (
+          users.map((u) => {
+            return (
+              <li key={u.id}>
+                <a
+                  href={`https://github.com/${u.login}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {u.login}
+                </a>
+              </li>
+            );
+          })
+        )}
       </ul>
     </div>
   );
